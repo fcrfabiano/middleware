@@ -10,19 +10,66 @@ app.use(cors());
 const users = [];
 
 function checksExistsUserAccount(request, response, next) {
-  // Complete aqui
+  const { username } = request.headers;
+
+  const user = users.find((user) => user.username === username);
+
+  if(!user) {
+    response.status(404).json({ error: "User do not found!"});
+  }
+
+  request.user = user;
+
+  return next();
 }
 
 function checksCreateTodosUserAvailability(request, response, next) {
-  // Complete aqui
+  const { user } = request;
+
+  if(user.pro === false && user.todos.length < 10 || user.pro === true) {
+    return next();
+  } else {
+    return response.status(403).json({ error: "usuario excedeu quatidade maxima de to do"});
+  }
 }
 
 function checksTodoExists(request, response, next) {
-  // Complete aqui
+  const { username } = request.headers;
+  const { id } = request.params;
+
+  const user = users.find((user) => user.username === username);
+
+  if(user !== undefined && user.todos !== undefined) {
+   const todo = user.todos.find((todo) => todo.id === id);
+
+  if(validate(id)) {
+    if(user && todo) {
+      request.todo = todo;
+      request.user = user;
+      return next();
+    } else {
+      return response.status(404).json({ error: "To do not found!" });
+    }
+  } else {
+    return response.status(400).json({ error: "ID it is not a UUID" });
+  }
+} else {
+  return response.status(404).json({ error: "undefined user/todos" });
+}
 }
 
 function findUserById(request, response, next) {
-  // Complete aqui
+  const { id } = request.params;
+
+  const user = users.find((user) => user.id === id);
+
+  if(!user) {
+    response.status(404).json({ error: "User do not found!"});
+  } else {
+    request.user = user;
+
+    return next();
+  }
 }
 
 app.post('/users', (request, response) => {
@@ -34,10 +81,13 @@ app.post('/users', (request, response) => {
     return response.status(400).json({ error: 'Username already exists' });
   }
 
+  if (name !== undefined && username !== undefined) {
+  
+
   const user = {
     id: uuidv4(),
-    name,
-    username,
+    name: name,
+    username: username,
     pro: false,
     todos: []
   };
@@ -45,6 +95,9 @@ app.post('/users', (request, response) => {
   users.push(user);
 
   return response.status(201).json(user);
+} else {
+  return response.status(400).json({error: "undefined name/username!"});
+}
 });
 
 app.get('/users/:id', findUserById, (request, response) => {
@@ -68,6 +121,9 @@ app.patch('/users/:id/pro', findUserById, (request, response) => {
 app.get('/todos', checksExistsUserAccount, (request, response) => {
   const { user } = request;
 
+  if(user === undefined || user.todos === undefined) {
+    return response.status(404).send();
+  }
   return response.json(user.todos);
 });
 
